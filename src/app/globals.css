@@ -143,8 +143,8 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 /* A compact, scrollable recommendation shelf within the conversation. */
 .results-list{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;overflow-x:auto;overflow-y:hidden;padding:5px 3px 12px;margin:12px -3px 0;scrollbar-width:thin;scroll-snap-type:x proximity}
 .results-list.has-expanded{display:block;overflow:visible}
-.op-card{min-width:0;scroll-snap-align:start;display:flex;flex-direction:column;padding:14px;transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
-.op-card:hover{transform:scale(1.015);box-shadow:0 8px 24px #0002}
+.op-card{min-width:0;scroll-snap-align:start;display:flex;flex-direction:column;padding:14px;transition:transform .2s ease-out,border-color .2s ease-out,box-shadow .2s ease-out}
+.op-card:hover{transform:scale(1.005);box-shadow:0 4px 16px #0001}
 .op-card-expanded:hover{transform:none}
 .op-card-main{border:0;background:transparent;padding:0;text-align:left;width:100%;color:inherit;flex:1;display:flex;flex-direction:column;align-items:stretch}
 .op-card-main .op-top{width:100%}

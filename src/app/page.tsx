@@ -15,6 +15,7 @@ export default function Home(){
  const [viewed,setViewed]=useState<string[]>([]);
  const [profile,setProfile]=useState<CareerProfile|null>(null),[profileOpen,setProfileOpen]=useState(false),[ready,setReady]=useState(false);
  const timers=useRef(new Map<string,ReturnType<typeof setTimeout>>());
+ const sidebarBeforeProfile=useRef(false);
  const end=useRef<HTMLDivElement>(null),fileRef=useRef<HTMLInputElement>(null),textarea=useRef<HTMLTextAreaElement>(null);
  const chat=chats.find(c=>c.id===active)??chats[0];
  const typing=pending.includes(active);
@@ -64,9 +65,11 @@ export default function Home(){
   const c:Chat={id:uid(),title:`${result.personalized?'Recommended':'Popular'} ${kind==='job'?'jobs':'freelance projects'}`,messages:[{id:uid(),role:'assistant',text:result.text,items:result.items,discovery:{kind,personalized:result.personalized,reasons:result.reasons}}]};
   setChats(cs=>[c,...cs]);setActive(c.id);resetComposer();
  };
+ const openProfile=()=>{sidebarBeforeProfile.current=sidebarOpen;setSidebarOpen(false);setProfileOpen(true)};
+ const closeProfile=()=>{setProfileOpen(false);setSidebarOpen(sidebarBeforeProfile.current)};
  const saveProfile=(draft:CareerProfile)=>{
   const next={...draft,name:draft.name.trim(),role:draft.role.trim(),skills:draft.skills.map(s=>s.trim()).filter(Boolean)};
-  setProfile(next);setProfileOpen(false);
+  setProfile(next);closeProfile();
   const updatedContext=careerContext(chats.flatMap(c=>c.messages),next);
   setChats(cs=>cs.map(c=>({...c,messages:c.messages.map(m=>{
    if(!m.discovery)return m;const result=recommend(m.discovery.kind,updatedContext,viewed);
@@ -78,14 +81,14 @@ export default function Home(){
  const doCopy=async(text:string)=>{await navigator.clipboard?.writeText(text);setCopied(true);setTimeout(()=>setCopied(false),1200)};
  const submit=(e:React.FormEvent)=>{e.preventDefault();send()};
  return <main className={`app ${light?'light':''} ${sidebarOpen?'sidebar-expanded':''}`}>
-  <ChatMenu chats={chats} active={active} savedCount={saved.length} light={light} hasConversation={hasConversation} expanded={sidebarOpen} onExpandedChange={setSidebarOpen} onNew={newChat} onSelect={selectChat} onSaved={()=>send('Show my saved opportunities')} onAttach={()=>fileRef.current?.click()} onTheme={()=>setLight(!light)} onDiscover={discover} onDelete={deleteChat} onClear={clearSession} onProfile={()=>{setSidebarOpen(false);setProfileOpen(true)}} personalized={context.hasInfo}/>
+  <ChatMenu chats={chats} active={active} savedCount={saved.length} light={light} hasConversation={hasConversation} expanded={sidebarOpen} onExpandedChange={setSidebarOpen} onNew={newChat} onSelect={selectChat} onSaved={()=>send('Show my saved opportunities')} onAttach={()=>fileRef.current?.click()} onTheme={()=>setLight(!light)} onDiscover={discover} onDelete={deleteChat} onClear={clearSession} onProfile={openProfile} personalized={context.hasInfo}/>
 
   <section className={`workspace ${isNewConversation ? 'welcome-workspace' : 'active-workspace'}`} aria-label="Career conversation">
    {!isNewConversation&&<div className="chat-scroll"><div className="conversation">
-    {!context.hasInfo&&<div className="personalization-notice">For a personalized experience, <button onClick={()=>{setSidebarOpen(false);setProfileOpen(true)}}>sign up</button> and provide your CV and portfolio.</div>}
+    {!context.hasInfo&&<div className="personalization-notice">For a personalized experience, <button onClick={openProfile}>sign up</button> and provide your CV and portfolio.</div>}
     {chat.messages.map((m,i)=><motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.24}} className={`message-row ${m.role}`} key={m.id}>
 
-      <div className="message-body">{m.role==='user'?<div className="user-bubble">{m.text}</div>:<><div className="assistant-text">{m.text}</div>{m.profile&&<div className="profile-card"><div className="profile-head"><div className="profile-icon"><BriefcaseBusiness size={17}/></div><div><b>Profile snapshot</b><span>Based on your materials</span></div><span className="profile-level">MID-LEVEL</span></div><div className="profile-role">Frontend engineer <span>· 5 years experience</span></div><div className="skill-list">{['React','TypeScript','Next.js','Design systems','Accessibility','Product thinking'].map(x=><span key={x}>{x}</span>)}</div><div className="profile-foot"><span>Strongest fit</span><b>Product engineering · UI development</b></div></div>}{m.items&&<motion.div layout className={`results-list ${expanded?.startsWith(m.id+':')?'has-expanded':''}`}>{m.items.slice(0,3).filter(id=>!expanded?.startsWith(m.id+':')||expanded===m.id+':'+id).map(id=>{const o=opportunities.find(x=>x.id===id);const key=m.id+':'+id;return o&&<OpportunityCard key={id} item={o} expanded={expanded===key} toggleExpanded={()=>{if(expanded===key){setExpanded(null)}else{setExpanded(key);setViewed(ids=>[...ids.filter(value=>value!==id),id].slice(-30))}}} saved={saved.includes(id)} onSave={()=>toggleSave(id)} onAsk={s=>send(s)} discovery={m.discovery} reason={m.discovery?.reasons[id]}/>})}</motion.div>}{m.content&&<div className="generated"><div className="generated-head"><span><FileText size={14}/> Draft for you</span><div><button onClick={()=>doCopy(m.content!)}><Copy size={13}/>{copied?'Copied':'Copy'}</button><button onClick={()=>send('Regenerate this draft')}><Sparkles size={13}/>Regenerate</button></div></div><p>{m.content}</p></div>}{i>0&&<div className="message-tools"><button title="Copy response" onClick={()=>doCopy(m.text)}>{copied?<Check size={13}/>:<Copy size={13}/>}</button></div>}</>}</div>
+      <div className="message-body">{m.role==='user'?<div className="user-bubble">{m.text}</div>:<><div className="assistant-text">{m.text}</div>{m.profile&&<div className="profile-card"><div className="profile-head"><div className="profile-icon"><BriefcaseBusiness size={17}/></div><div><b>Profile snapshot</b><span>Based on your materials</span></div><span className="profile-level">MID-LEVEL</span></div><div className="profile-role">Frontend engineer <span>· 5 years experience</span></div><div className="skill-list">{['React','TypeScript','Next.js','Design systems','Accessibility','Product thinking'].map(x=><span key={x}>{x}</span>)}</div><div className="profile-foot"><span>Strongest fit</span><b>Product engineering · UI development</b></div></div>}{m.items&&<div className={`results-list ${expanded?.startsWith(m.id+':')?'has-expanded':''}`}>{m.items.slice(0,3).filter(id=>!expanded?.startsWith(m.id+':')||expanded===m.id+':'+id).map(id=>{const o=opportunities.find(x=>x.id===id);const key=m.id+':'+id;return o&&<OpportunityCard key={id} item={o} expanded={expanded===key} toggleExpanded={()=>{if(expanded===key){setExpanded(null)}else{setExpanded(key);setViewed(ids=>[...ids.filter(value=>value!==id),id].slice(-30))}}} saved={saved.includes(id)} onSave={()=>toggleSave(id)} onAsk={s=>send(s)} discovery={m.discovery} reason={m.discovery?.reasons[id]}/>})}</div>}{m.content&&<div className="generated"><div className="generated-head"><span><FileText size={14}/> Draft for you</span><div><button onClick={()=>doCopy(m.content!)}><Copy size={13}/>{copied?'Copied':'Copy'}</button><button onClick={()=>send('Regenerate this draft')}><Sparkles size={13}/>Regenerate</button></div></div><p>{m.content}</p></div>}{i>0&&<div className="message-tools"><button title="Copy response" onClick={()=>doCopy(m.text)}>{copied?<Check size={13}/>:<Copy size={13}/>}</button></div>}</>}</div>
      </motion.div>)}
     {typing&&<div className="message-row assistant typing"><div className="typing-dots" role="status" aria-label="Assistant is thinking"><i/><i/><i/></div></div>}<div ref={end}/>
    </div></div>}
@@ -108,24 +111,24 @@ export default function Home(){
     </form>
    </motion.div>
   </section>
-  {profileOpen&&<ProfileDialog profile={profile} onClose={()=>setProfileOpen(false)} onSave={saveProfile}/>}
+  {profileOpen&&<ProfileDialog profile={profile} onClose={closeProfile} onSave={saveProfile}/>}
  </main>
 }
 function OpportunityCard({item,expanded,toggleExpanded,saved,onSave,onAsk,discovery,reason}:{item:Opportunity;expanded:boolean;toggleExpanded:()=>void;saved:boolean;onSave:()=>void;onAsk:(s:string)=>void;discovery?:Message['discovery'];reason?:string}){
- return <motion.article layout className={`op-card ${expanded?'op-card-expanded':''}`} transition={{duration:.24}}>
+ return <article className={`op-card ${expanded?'op-card-expanded':''}`}>
   <button type="button" className="op-card-main" onClick={toggleExpanded} aria-expanded={expanded}>
    <div className="op-top"><div className="company-mark">{item.logo}</div><div className="op-title"><b>{item.title}</b><span>{item.company} · {item.location}</span></div></div>
    <p className="op-summary">{item.summary}</p><div className="op-meta"><span>{item.type}</span><span>{item.compensation}</span></div>
    <span className="card-expand-label">{expanded?'Collapse':'View details'} <ChevronRight size={13}/></span>
   </button>
-  <AnimatePresence initial={false}>{expanded&&<motion.div className="op-detail" initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} transition={{duration:.2}}>
+  <AnimatePresence initial={false}>{expanded&&<motion.div className="op-detail" initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}} transition={{duration:.18,ease:'easeOut'}}>
    <p>{item.description}</p>{reason&&<div className="why-match"><Sparkles size={14}/><span>{reason}</span></div>}
    <div className="op-meta expanded-meta"><span><BriefcaseBusiness size={13}/>{item.type}</span><span>{item.compensation}</span>{item.kind==='project'&&<span><Clock3 size={13}/>{item.duration}</span>}</div>
    <div className="op-skills">{item.skills.map(skill=><span key={skill}>{skill}</span>)}</div>
    <div className="detail-actions"><button type="button" onClick={()=>onAsk(`${item.kind==='job'?'Help me apply to':'Help me write a proposal for'} ${item.title}`)}>Prepare application <ArrowUp size={13}/></button></div>
   </motion.div>}</AnimatePresence>
   <div className="op-actions"><span>{discovery?(discovery.personalized?'For you':'Suggested'):'Opportunity'}</span><button type="button" className={`save-btn ${saved?'is-saved':''}`} onClick={onSave}>{saved?<BookmarkCheck size={14}/>:<Bookmark size={14}/>} {saved?'Saved':'Save'}</button></div>
- </motion.article>
+ </article>
 }
 function respond(q:string,history:Message[],hasFile:boolean,context:CareerContext,saved:string[],viewed:string[]):Omit<Message,'id'|'role'>{const lower=q.toLowerCase();if(hasFile)return {text:'Your file is attached. This demo does not read its contents. Share your role, main skills, and preferred location, or complete your career profile, so I can suggest relevant opportunities.'};
  if(/analy[sz]|cv|resume|portfolio|github|linkedin/.test(lower))return {text:'Share your CV or portfolio using the menu, then tell me your role and main skills. You can also add these details to your career profile for personalized recommendations.'};
