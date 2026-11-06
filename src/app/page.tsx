@@ -15,7 +15,6 @@ export default function Home(){
  const [viewed,setViewed]=useState<string[]>([]);
  const [profile,setProfile]=useState<CareerProfile|null>(null),[profileOpen,setProfileOpen]=useState(false),[ready,setReady]=useState(false);
  const timers=useRef(new Map<string,ReturnType<typeof setTimeout>>());
- const sidebarBeforeProfile=useRef(false);
  const end=useRef<HTMLDivElement>(null),fileRef=useRef<HTMLInputElement>(null),textarea=useRef<HTMLTextAreaElement>(null);
  const chat=chats.find(c=>c.id===active)??chats[0];
  const typing=pending.includes(active);
@@ -65,6 +64,12 @@ export default function Home(){
   const c:Chat={id:uid(),title:`${result.personalized?'Recommended':'Popular'} ${kind==='job'?'jobs':'freelance projects'}`,messages:[{id:uid(),role:'assistant',text:result.text,items:result.items,discovery:{kind,personalized:result.personalized,reasons:result.reasons}}]};
   setChats(cs=>[c,...cs]);setActive(c.id);resetComposer();
  };
+ const showSaved=()=>{
+  const items=opportunities.filter(item=>saved.includes(item.id)).map(item=>item.id);
+  const rows:Message[]=items.length?Array.from({length:Math.ceil(items.length/3)},(_,i)=>({id:uid(),role:'assistant',text:i===0?'Here are your saved opportunities.':'',items:items.slice(i*3,i*3+3)})):[{id:uid(),role:'assistant',text:'You haven’t saved any opportunities yet. Use Save on an opportunity to find it here.',items:[]}];
+  const conversation:Chat={id:uid(),title:'Saved opportunities',messages:rows};
+  setChats(cs=>[conversation,...cs]);setActive(conversation.id);resetComposer();
+ };
  const startApplication=(item:Opportunity,draft?:string)=>{
   const existing=chats.find(c=>c.opportunityId===item.id&&(c.conversationType==='client'||c.conversationType==='recruiter'));
   if(existing&&!draft){setActive(existing.id);resetComposer();setSidebarOpen(true);return}
@@ -74,8 +79,8 @@ export default function Home(){
   else{const conversation:Chat={id:uid(),title:`${item.company} · ${item.title}`,conversationType:item.kind==='job'?'recruiter':'client',opportunityId:item.id,messages:[message,acknowledgment]};setChats(cs=>[conversation,...cs]);setActive(conversation.id)}
   resetComposer();setSidebarOpen(true);
  };
- const openProfile=()=>{sidebarBeforeProfile.current=sidebarOpen;setSidebarOpen(false);setProfileOpen(true)};
- const closeProfile=()=>{setProfileOpen(false);setSidebarOpen(sidebarBeforeProfile.current)};
+ const openProfile=()=>{setProfileOpen(true)};
+ const closeProfile=()=>{setProfileOpen(false)};
  const saveProfile=(draft:CareerProfile)=>{
   const next={...draft,name:draft.name.trim(),role:draft.role.trim(),skills:draft.skills.map(s=>s.trim()).filter(Boolean)};
   setProfile(next);closeProfile();
@@ -90,7 +95,7 @@ export default function Home(){
  const doCopy=async(text:string)=>{await navigator.clipboard?.writeText(text);setCopied(true);setTimeout(()=>setCopied(false),1200)};
  const submit=(e:React.FormEvent)=>{e.preventDefault();send()};
  return <main className={`app ${light?'light':''} ${sidebarOpen?'sidebar-expanded':''}`}>
-  <ChatMenu chats={chats} active={active} savedCount={saved.length} light={light} hasConversation={hasConversation} expanded={sidebarOpen} onExpandedChange={setSidebarOpen} onNew={newChat} onSelect={selectChat} onSaved={()=>send('Show my saved opportunities')} onAttach={()=>fileRef.current?.click()} onTheme={()=>setLight(!light)} onDiscover={discover} onDelete={deleteChat} onClear={clearSession} onProfile={openProfile} personalized={context.hasInfo}/>
+  <ChatMenu chats={chats} active={active} savedCount={saved.length} light={light} hasConversation={hasConversation} expanded={sidebarOpen} onExpandedChange={setSidebarOpen} onNew={newChat} onSelect={selectChat} onSaved={showSaved} onAttach={()=>fileRef.current?.click()} onTheme={()=>setLight(!light)} onDiscover={discover} onDelete={deleteChat} onClear={clearSession} onProfile={openProfile} profileOpen={profileOpen} personalized={context.hasInfo}/>
 
   <section className={`workspace ${isNewConversation ? 'welcome-workspace' : 'active-workspace'}`} aria-label="Career conversation">
    {!isNewConversation&&<div className="chat-scroll"><div className="conversation">

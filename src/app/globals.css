@@ -78,6 +78,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 .menu-note{padding:3px 10px;font-size:11px;line-height:1.7;color:var(--muted)}
 
 .sidebar-content{height:100%;width:100%;min-width:240px;display:flex;flex-direction:column;padding:0 12px}
+.sidebar-content[hidden]{display:none}
 .sidebar-brand{height:76px;flex-shrink:0;display:flex;align-items:center;padding-left:52px;padding-top:env(safe-area-inset-top);font-size:19px;font-weight:600;letter-spacing:-.7px}
 .sidebar-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;padding-bottom:16px}
 .sidebar-scroll .menu-history{max-height:none;overflow:visible}
@@ -175,3 +176,10 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 .draft-actions{display:flex;justify-content:flex-end;padding:10px 12px;border-top:1px solid var(--line)}
 .draft-actions button{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:6px;background:transparent;color:var(--soft);padding:7px 10px;font-size:10px}
 .draft-actions button:hover{background:var(--panel2);color:var(--text)}
+
+.profile-dialog fieldset{border:0;padding:0;margin:0;min-width:0}
+.profile-dialog::backdrop{animation:profile-backdrop-in .18s ease-out both}
+.profile-dialog.is-closing::backdrop{animation:profile-backdrop-out .18s ease-out both}
+@keyframes profile-backdrop-in{from{opacity:0}to{opacity:1}}
+@keyframes profile-backdrop-out{from{opacity:1}to{opacity:0}}
+@media(prefers-reduced-motion:reduce){.profile-dialog::backdrop,.profile-dialog.is-closing::backdrop{animation:none}}

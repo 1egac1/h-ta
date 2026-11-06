@@ -22,6 +22,7 @@ type Props = {
   onDelete: (id: string) => void;
   onClear: () => void;
   onProfile: () => void;
+  profileOpen: boolean;
   personalized: boolean;
 };
 
@@ -69,7 +70,7 @@ export function ChatMenu(props: Props) {
   };
 
   useEffect(() => {
-    if (!expanded && !showInfo) return;
+    if (props.profileOpen || (!expanded && !showInfo)) return;
     // A docked sidebar leaves keyboard focus in the conversation. Overlays contain it.
     if (showInfo) info.current?.querySelector<HTMLButtonElement>('button')?.focus();
     else if (mobile) trigger.current?.focus();
@@ -97,7 +98,7 @@ export function ChatMenu(props: Props) {
       document.removeEventListener('pointerdown', dismiss);
       document.removeEventListener('keydown', keyboard);
     };
-  }, [expanded, showInfo, mobile, props.onExpandedChange]);
+  }, [expanded, showInfo, mobile, props.onExpandedChange, props.profileOpen]);
 
   const duration = reduceMotion ? 0 : 0.38;
   return <>
@@ -111,8 +112,7 @@ export function ChatMenu(props: Props) {
         onClick={() => props.hasConversation ? props.onExpandedChange(!expanded) : setInfoOpen(!infoOpen)} whileTap={reduceMotion ? undefined : {scale:0.92}}>
         <AnimatePresence initial={false} mode="wait"><motion.span key={expanded?'collapse':'dots'} initial={{opacity:0,rotate:-45}} animate={{opacity:1,rotate:0}} exit={{opacity:0,rotate:45}} transition={{duration:reduceMotion?0:0.1}}>{expanded?<PanelLeftClose size={18}/>:<MoreHorizontal size={21}/>}</motion.span></AnimatePresence>
       </motion.button>
-      <AnimatePresence>
-        {expanded && <motion.nav id="workspace-sidebar" key="sidebar" aria-label="Conversations and searches" className="sidebar-content" initial={{opacity:0,x:reduceMotion?0:-10}} animate={{opacity:1,x:0}} exit={{opacity:0,transition:{duration:reduceMotion?0:0.08}}} transition={{delay:reduceMotion?0:0.1,duration:reduceMotion?0:0.22}}>
+      <motion.nav id="workspace-sidebar" aria-label="Conversations and searches" className="sidebar-content" hidden={!expanded} aria-hidden={!expanded} initial={false} animate={{opacity:expanded?1:0,x:expanded||reduceMotion?0:-10}} transition={{duration:reduceMotion?0:0.22,ease:'easeOut'}}>
           <div className="sidebar-brand">morrow</div>
           <motion.div className="sidebar-scroll" layoutScroll>
             <button type="button" className="menu-action new-dialogue" onClick={() => act(props.onNew)}><Plus size={16}/><span>New conversation</span></button>
@@ -131,21 +131,22 @@ export function ChatMenu(props: Props) {
             </div>
           </motion.div>
           <div className="sidebar-footer">
-            <button type="button" className="menu-action" onClick={()=>act(props.onProfile)}><UserRound size={16}/><span>Your career profile</span></button>
+            <button type="button" className="menu-action" onClick={()=>{setInfoOpen(false);props.onProfile()}}><UserRound size={16}/><span>Your career profile</span></button>
             <button type="button" className="menu-action" onClick={()=>act(props.onClear)}><Trash2 size={16}/><span>Clear session</span></button>
             <button type="button" className="menu-action" onClick={() => act(props.onSaved)}><Bookmark size={16}/><span>Saved opportunities</span><small>{props.savedCount}</small></button>
             <button type="button" className="menu-action" onClick={() => act(props.onAttach)}><Paperclip size={16}/><span>Attach CV or portfolio</span></button>
             <button type="button" className="menu-action" onClick={props.onTheme}>{props.light?<Moon size={16}/>:<Sun size={16}/>}<span>{props.light?'Switch to dark mode':'Switch to light mode'}</span></button>
             <p className="menu-note menu-footnote">Sample opportunities · Private to this browser</p>
           </div>
-        </motion.nav>}
+      </motion.nav>
+      <AnimatePresence>
         {showInfo&&<motion.div key="info" id="morrow-info" ref={info} role="dialog" aria-label="About Morrow" className="menu-panel" initial={{opacity:0,scale:reduceMotion?1:0.9,y:reduceMotion?0:-8}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:reduceMotion?1:0.95}} transition={{duration:reduceMotion?0:0.2}} style={{transformOrigin:'top left'}}>
           <div className="menu-name">A little about morrow<span>A conversation about what comes next.</span></div>
           <div className="search-templates">{shortcuts.map(({label,icon:Icon,kind}) => <button type="button" className="search-template" key={kind} onClick={() => act(() => props.onDiscover(kind))}><Icon size={17}/><span><b>{label}</b><small>{props.personalized?'Based on your skills and preferences':'Explore popular opportunities'}</small></span><ArrowUpRight size={14}/></button>)}</div>
           <p className="menu-note">Find a role that fits, discover freelance projects, and get help with applications. Tell me what you have in mind, or share your CV to begin.</p>
           <p className="menu-note">Browse popular opportunities now, or start a conversation to get recommendations tailored to your experience.</p>
           <div className="menu-divider"/>
-          <button type="button" className="menu-action" onClick={()=>act(props.onProfile)}><UserRound size={16}/><span>Your career profile</span></button>
+          <button type="button" className="menu-action" onClick={()=>{setInfoOpen(false);props.onProfile()}}><UserRound size={16}/><span>Your career profile</span></button>
           <button type="button" className="menu-action" onClick={()=>act(props.onClear)}><Trash2 size={16}/><span>Clear session</span></button>
           <button type="button" className="menu-action" onClick={() => act(props.onAttach)}><Paperclip size={16}/><span>Attach CV or portfolio</span></button>
           <button type="button" className="menu-action" onClick={props.onTheme}>{props.light?<Moon size={16}/>:<Sun size={16}/>}<span>{props.light?'Switch to dark mode':'Switch to light mode'}</span></button>
