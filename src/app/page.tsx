@@ -21,7 +21,7 @@ export default function Home(){
  const typing=pending.includes(active);
  const isNewConversation=chat.title==='New conversation'&&chat.messages.length===1;
  const hasConversation=chats.some(c=>c.title!=='New conversation'||c.messages.some(m=>m.role==='user'));
- const context=careerContext(chats.flatMap(c=>c.messages),profile);
+ const context=careerContext(chats.filter(c=>!c.conversationType||c.conversationType==='assistant').flatMap(c=>c.messages),profile);
  useEffect(()=>{setSidebarOpen(hasConversation)},[hasConversation]);
  useEffect(()=>{
   try{const session=readSession(localStorage);setChats(session.chats);setActive(session.active);setSaved(session.saved);setViewed(session.viewed??[]);setProfile(session.profile);setLight(localStorage.getItem('morrow-theme')==='light')}catch{}
@@ -35,12 +35,12 @@ export default function Home(){
   const value=text.trim();if(!ready||timers.current.has(active)||(!value&&!attachments.length))return;
   const target=active,user:Message={id:uid(),role:'user',text:value+(attachments.length?`\n📎 ${attachments.join(', ')}`:'')};
   const hadFiles=attachments.length>0,history=chat.messages;
-  const userContext=careerContext([...chats.flatMap(c=>c.messages),user],profile);
+  const userContext=careerContext([...chats.filter(c=>!c.conversationType||c.conversationType==='assistant').flatMap(c=>c.messages),user],profile);
   setChats(cs=>cs.map(c=>c.id===target?{...c,title:c.title==='New conversation'?value.slice(0,34)||'Profile analysis':c.title,messages:[...c.messages,user]}:c));
   resetComposer();setPending(ids=>[...ids,target]);
   const timer=setTimeout(()=>{
    timers.current.delete(target);
-   const reply=respond(value,history,hadFiles,userContext,saved,viewed);
+   const reply=chat.conversationType==='client'||chat.conversationType==='recruiter'?{text:'This is a simulated reply. Your message stays in this browser and was not delivered.'}:respond(value,history,hadFiles,userContext,saved,viewed);
    setChats(cs=>cs.map(c=>c.id===target?{...c,messages:[...c.messages,{id:uid(),role:'assistant',...reply}]}:c));
    setPending(ids=>ids.filter(id=>id!==target));
   },900);
@@ -65,12 +65,21 @@ export default function Home(){
   const c:Chat={id:uid(),title:`${result.personalized?'Recommended':'Popular'} ${kind==='job'?'jobs':'freelance projects'}`,messages:[{id:uid(),role:'assistant',text:result.text,items:result.items,discovery:{kind,personalized:result.personalized,reasons:result.reasons}}]};
   setChats(cs=>[c,...cs]);setActive(c.id);resetComposer();
  };
+ const startApplication=(item:Opportunity,draft?:string)=>{
+  const existing=chats.find(c=>c.opportunityId===item.id&&(c.conversationType==='client'||c.conversationType==='recruiter'));
+  if(existing&&!draft){setActive(existing.id);resetComposer();setSidebarOpen(true);return}
+  const message:Message={id:uid(),role:'user',text:draft?.trim()||`Hello ${item.company}, I’m interested in ${item.title}. Could you share the next steps?`};
+  const acknowledgment:Message={id:uid(),role:'assistant',text:'This is a simulated conversation. Your application has not been sent to a client or recruiter.'};
+  if(existing){setChats(cs=>cs.map(c=>c.id===existing.id?{...c,messages:[...c.messages,message,acknowledgment]}:c));setActive(existing.id)}
+  else{const conversation:Chat={id:uid(),title:`${item.company} · ${item.title}`,conversationType:item.kind==='job'?'recruiter':'client',opportunityId:item.id,messages:[message,acknowledgment]};setChats(cs=>[conversation,...cs]);setActive(conversation.id)}
+  resetComposer();setSidebarOpen(true);
+ };
  const openProfile=()=>{sidebarBeforeProfile.current=sidebarOpen;setSidebarOpen(false);setProfileOpen(true)};
  const closeProfile=()=>{setProfileOpen(false);setSidebarOpen(sidebarBeforeProfile.current)};
  const saveProfile=(draft:CareerProfile)=>{
   const next={...draft,name:draft.name.trim(),role:draft.role.trim(),skills:draft.skills.map(s=>s.trim()).filter(Boolean)};
   setProfile(next);closeProfile();
-  const updatedContext=careerContext(chats.flatMap(c=>c.messages),next);
+  const updatedContext=careerContext(chats.filter(c=>!c.conversationType||c.conversationType==='assistant').flatMap(c=>c.messages),next);
   setChats(cs=>cs.map(c=>({...c,messages:c.messages.map(m=>{
    if(!m.discovery)return m;const result=recommend(m.discovery.kind,updatedContext,viewed);
    return {...m,text:result.text,items:result.items,discovery:{...m.discovery,personalized:result.personalized,reasons:result.reasons}};
@@ -85,10 +94,11 @@ export default function Home(){
 
   <section className={`workspace ${isNewConversation ? 'welcome-workspace' : 'active-workspace'}`} aria-label="Career conversation">
    {!isNewConversation&&<div className="chat-scroll"><div className="conversation">
-    {!context.hasInfo&&<div className="personalization-notice">For a personalized experience, <button onClick={openProfile}>sign up</button> and provide your CV and portfolio.</div>}
+    {(chat.conversationType==='client'||chat.conversationType==='recruiter')&&<div className="contact-chat-notice"><strong>{chat.title}</strong><span>Demo conversation · Messages and applications are not delivered</span></div>}
+    {!context.hasInfo&&(!chat.conversationType||chat.conversationType==='assistant')&&<div className="personalization-notice">For a personalized experience, <button onClick={openProfile}>sign up</button> and provide your CV and portfolio.</div>}
     {chat.messages.map((m,i)=><motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{duration:.24}} className={`message-row ${m.role}`} key={m.id}>
 
-      <div className="message-body">{m.role==='user'?<div className="user-bubble">{m.text}</div>:<><div className="assistant-text">{m.text}</div>{m.profile&&<div className="profile-card"><div className="profile-head"><div className="profile-icon"><BriefcaseBusiness size={17}/></div><div><b>Profile snapshot</b><span>Based on your materials</span></div><span className="profile-level">MID-LEVEL</span></div><div className="profile-role">Frontend engineer <span>· 5 years experience</span></div><div className="skill-list">{['React','TypeScript','Next.js','Design systems','Accessibility','Product thinking'].map(x=><span key={x}>{x}</span>)}</div><div className="profile-foot"><span>Strongest fit</span><b>Product engineering · UI development</b></div></div>}{m.items&&<div className={`results-list ${expanded?.startsWith(m.id+':')?'has-expanded':''}`}>{m.items.slice(0,3).filter(id=>!expanded?.startsWith(m.id+':')||expanded===m.id+':'+id).map(id=>{const o=opportunities.find(x=>x.id===id);const key=m.id+':'+id;return o&&<OpportunityCard key={id} item={o} expanded={expanded===key} toggleExpanded={()=>{if(expanded===key){setExpanded(null)}else{setExpanded(key);setViewed(ids=>[...ids.filter(value=>value!==id),id].slice(-30))}}} saved={saved.includes(id)} onSave={()=>toggleSave(id)} onAsk={s=>send(s)} discovery={m.discovery} reason={m.discovery?.reasons[id]}/>})}</div>}{m.content&&<div className="generated"><div className="generated-head"><span><FileText size={14}/> Draft for you</span><div><button onClick={()=>doCopy(m.content!)}><Copy size={13}/>{copied?'Copied':'Copy'}</button><button onClick={()=>send('Regenerate this draft')}><Sparkles size={13}/>Regenerate</button></div></div><p>{m.content}</p></div>}{i>0&&<div className="message-tools"><button title="Copy response" onClick={()=>doCopy(m.text)}>{copied?<Check size={13}/>:<Copy size={13}/>}</button></div>}</>}</div>
+      <div className="message-body">{m.role==='user'?<div className="user-bubble">{m.text}</div>:<><div className="assistant-text">{m.text}</div>{m.profile&&<div className="profile-card"><div className="profile-head"><div className="profile-icon"><BriefcaseBusiness size={17}/></div><div><b>Profile snapshot</b><span>Based on your materials</span></div><span className="profile-level">MID-LEVEL</span></div><div className="profile-role">Frontend engineer <span>· 5 years experience</span></div><div className="skill-list">{['React','TypeScript','Next.js','Design systems','Accessibility','Product thinking'].map(x=><span key={x}>{x}</span>)}</div><div className="profile-foot"><span>Strongest fit</span><b>Product engineering · UI development</b></div></div>}{m.items&&<div className={`results-list ${expanded?.startsWith(m.id+':')?'has-expanded':''}`}>{m.items.slice(0,3).filter(id=>!expanded?.startsWith(m.id+':')||expanded===m.id+':'+id).map(id=>{const o=opportunities.find(x=>x.id===id);const key=m.id+':'+id;return o&&<OpportunityCard key={id} item={o} expanded={expanded===key} toggleExpanded={()=>{if(expanded===key){setExpanded(null)}else{setExpanded(key);setViewed(ids=>[...ids.filter(value=>value!==id),id].slice(-30))}}} saved={saved.includes(id)} onSave={()=>toggleSave(id)} onAsk={s=>send(s)} discovery={m.discovery} reason={m.discovery?.reasons[id]}/>})}</div>}{m.content&&<div className="generated"><div className="generated-head"><span><FileText size={14}/> Draft for you</span><div><button onClick={()=>doCopy(m.content!)}><Copy size={13}/>{copied?'Copied':'Copy'}</button><button onClick={()=>send('Regenerate this draft')}><Sparkles size={13}/>Regenerate</button></div></div><p>{m.content}</p>{m.opportunityId&&<div className="draft-actions"><button type="button" onClick={()=>{const item=opportunities.find(o=>o.id===m.opportunityId);if(item)startApplication(item,m.content)}}>Send demo application <ArrowUp size={13}/></button></div>}</div>}{i>0&&<div className="message-tools"><button title="Copy response" onClick={()=>doCopy(m.text)}>{copied?<Check size={13}/>:<Copy size={13}/>}</button></div>}</>}</div>
      </motion.div>)}
     {typing&&<div className="message-row assistant typing"><div className="typing-dots" role="status" aria-label="Assistant is thinking"><i/><i/><i/></div></div>}<div ref={end}/>
    </div></div>}
@@ -102,7 +112,7 @@ export default function Home(){
      <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,.txt" multiple hidden onChange={e=>{addFile(e.target.files);e.target.value='';textarea.current?.focus()}}/>
      {attachments.length>0&&<div className="attachment-list">{attachments.map((a,i)=><span key={`${a}${i}`}><FileText size={13}/>{a}<button type="button" aria-label={`Remove ${a}`} onClick={()=>setAttachments(xs=>xs.filter((_,n)=>n!==i))}><X size={12}/></button></span>)}</div>}
      <div className="composer-line">
-      <textarea ref={textarea} aria-label="Message your career assistant" value={input} onChange={e=>{setInput(e.target.value);e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,150)+'px'}} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}} placeholder="Ask anything about your career..." rows={1}/>
+      <textarea ref={textarea} aria-label="Message your career assistant" value={input} onChange={e=>{setInput(e.target.value);e.target.style.height='auto';e.target.style.height=Math.min(e.target.scrollHeight,150)+'px'}} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}}} placeholder={chat.conversationType==='client'||chat.conversationType==='recruiter'?'Write a demo message...':'Ask anything about your career...'} rows={1}/>
      </div>
      <div className="composer-toolbar">
 
@@ -132,7 +142,7 @@ function OpportunityCard({item,expanded,toggleExpanded,saved,onSave,onAsk,discov
 }
 function respond(q:string,history:Message[],hasFile:boolean,context:CareerContext,saved:string[],viewed:string[]):Omit<Message,'id'|'role'>{const lower=q.toLowerCase();if(hasFile)return {text:'Your file is attached. This demo does not read its contents. Share your role, main skills, and preferred location, or complete your career profile, so I can suggest relevant opportunities.'};
  if(/analy[sz]|cv|resume|portfolio|github|linkedin/.test(lower))return {text:'Share your CV or portfolio using the menu, then tell me your role and main skills. You can also add these details to your career profile for personalized recommendations.'};
- if(/cover letter|proposal|draft|application introduction|regenerate|apply to|write.*application|interview|skill gap|improve.*cv/.test(lower)){const target=history.findLast(m=>m.role==='assistant'&&m.items)?.items?.[0],item=opportunities.find(o=>o.id===target);const kind=/proposal|freelance|project/.test(lower)?'proposal':'cover letter';return {text:`Here’s a tailored ${kind} draft you can make your own.`,content:`Hello ${item?.company??'Hiring Team'},\n\nI’m excited to apply for the ${item?.title??'role'}. I’m a frontend engineer with five years of experience building thoughtful, accessible products with React and TypeScript. I care about the details that make complex experiences feel clear and natural.\n\nThe opportunity to contribute to ${item?.company??'your team'} stands out to me. My background in design systems and close collaboration with product and design teams would let me make a meaningful contribution from day one.\n\nI’d love to share more about how I approach building useful, polished interfaces. Thank you for your consideration.\n\nBest,\nAlex Morgan`}}
+ if(/cover letter|proposal|draft|application introduction|regenerate|apply to|write.*application|interview|skill gap|improve.*cv/.test(lower)){const target=history.findLast(m=>m.opportunityId)?.opportunityId??history.findLast(m=>m.role==='assistant'&&m.items)?.items?.[0],item=opportunities.find(o=>lower.includes(o.title.toLowerCase()))??opportunities.find(o=>o.id===target);const kind=/proposal|freelance|project/.test(lower)?'proposal':'cover letter';return {text:`Here’s a tailored ${kind} draft you can make your own.`,opportunityId:item?.id,content:`Hello ${item?.company??'Hiring Team'},\n\nI’m excited to apply for the ${item?.title??'role'}. I’m a frontend engineer with five years of experience building thoughtful, accessible products with React and TypeScript. I care about the details that make complex experiences feel clear and natural.\n\nThe opportunity to contribute to ${item?.company??'your team'} stands out to me. My background in design systems and close collaboration with product and design teams would let me make a meaningful contribution from day one.\n\nI’d love to share more about how I approach building useful, polished interfaces. Thank you for your consideration.\n\nBest,\nAlex Morgan`}}
  if(!/compare|why.*match|more like|saved opportunities/.test(lower)){
   const kind:Opportunity['kind']=/freelance|project/.test(lower)?'project':/job|position|full.time/.test(lower)?'job':history.findLast(m=>m.discovery)?.discovery?.kind??'job';
   const result=recommend(kind,context,viewed);

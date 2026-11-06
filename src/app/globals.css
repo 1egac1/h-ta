@@ -159,3 +159,19 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
 .op-actions{color:var(--faint);font-size:10px}
 @media(max-width:700px){.results-list{grid-template-columns:none;grid-auto-columns:minmax(195px,75%);grid-auto-flow:column}.results-list.has-expanded{display:block}}
 @media(prefers-reduced-motion:reduce){.op-card:hover{transform:none}}
+
+.sidebar-scroll{display:flex;flex-direction:column}
+.sidebar-scroll > :not(.menu-history){flex-shrink:0}
+.sidebar-scroll .menu-history{display:flex;flex:1;flex-direction:column;min-height:0}
+.contact-conversations{margin-top:auto;padding-top:18px}
+.contact-conversations.has-contacts{margin-top:0}
+.contact-heading{display:flex;align-items:center;gap:8px;color:var(--faint);font-size:10px;white-space:nowrap;padding:0 4px 5px}
+.contact-heading::before,.contact-heading::after{content:'';height:1px;background:var(--line);flex:1}
+.contact-chat-notice{display:flex;flex-direction:column;gap:5px;padding:0 0 16px;margin-bottom:24px;border-bottom:1px solid var(--line)}
+.contact-chat-notice strong{font-size:13px;font-weight:600}
+.contact-chat-notice span{font-size:11px;color:var(--muted);line-height:1.5}
+.generated-head>div{flex-wrap:wrap;justify-content:flex-end}
+
+.draft-actions{display:flex;justify-content:flex-end;padding:10px 12px;border-top:1px solid var(--line)}
+.draft-actions button{display:flex;align-items:center;gap:6px;border:1px solid var(--line2);border-radius:6px;background:transparent;color:var(--soft);padding:7px 10px;font-size:10px}
+.draft-actions button:hover{background:var(--panel2);color:var(--text)}

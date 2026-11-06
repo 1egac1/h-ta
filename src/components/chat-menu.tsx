@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ArrowUpRight, Bookmark, BriefcaseBusiness, Check, Clock3, Moon, MoreHorizontal, Paperclip, Plus, Search, Sparkles, Sun, PanelLeftClose, Trash2, UserRound } from 'lucide-react';
+import type { Chat } from '@/lib/session';
 
 type Props = {
-  chats: { id: string; title: string }[];
+  chats: Pick<Chat, 'id' | 'title' | 'conversationType'>[];
   active: string;
   hasConversation: boolean;
   expanded: boolean;
@@ -41,6 +42,10 @@ export function ChatMenu(props: Props) {
   const expanded = props.hasConversation && props.expanded;
   const showInfo = !props.hasConversation && infoOpen;
   const filteredChats = props.chats.filter(chat => chat.title.toLowerCase().includes(search.toLowerCase()));
+  const assistantChats = filteredChats.filter(chat => !chat.conversationType || chat.conversationType === 'assistant');
+  const contactChats = filteredChats.filter(chat => chat.conversationType === 'client' || chat.conversationType === 'recruiter');
+  const hasContactChats = props.chats.some(chat => chat.conversationType === 'client' || chat.conversationType === 'recruiter');
+  const renderChat = (chat: Pick<Chat, 'id' | 'title'>) => <div className="dialogue-row" key={chat.id}><button type="button" className="menu-action" aria-current={chat.id===props.active?'page':undefined} onClick={() => act(() => props.onSelect(chat.id))}><span>{chat.title}</span>{chat.id===props.active&&<Check size={13}/>}</button><button type="button" className="delete-dialogue" aria-label={`Delete ${chat.title}`} title="Delete conversation" onClick={()=>props.onDelete(chat.id)}><Trash2 size={14}/></button></div>;
 
   useEffect(() => {
     const query = window.matchMedia('(max-width: 760px)');
@@ -109,15 +114,22 @@ export function ChatMenu(props: Props) {
       <AnimatePresence>
         {expanded && <motion.nav id="workspace-sidebar" key="sidebar" aria-label="Conversations and searches" className="sidebar-content" initial={{opacity:0,x:reduceMotion?0:-10}} animate={{opacity:1,x:0}} exit={{opacity:0,transition:{duration:reduceMotion?0:0.08}}} transition={{delay:reduceMotion?0:0.1,duration:reduceMotion?0:0.22}}>
           <div className="sidebar-brand">morrow</div>
-          <div className="sidebar-scroll">
+          <motion.div className="sidebar-scroll" layoutScroll>
             <button type="button" className="menu-action new-dialogue" onClick={() => act(props.onNew)}><Plus size={16}/><span>New conversation</span></button>
             <div className="menu-label">DISCOVER OPPORTUNITIES</div>
             <div className="search-templates">{shortcuts.map(({label,icon:Icon,kind}) => <button type="button" className="search-template" key={kind} onClick={() => act(() => props.onDiscover(kind))}><Icon size={17}/><span><b>{label}</b><small>{props.personalized?'Based on your skills and preferences':'Explore popular opportunities'}</small></span><ArrowUpRight size={14}/></button>)}</div>
             <div className="menu-divider"/>
             <div className="menu-label"><Clock3 size={12}/>YOUR DIALOGUES</div>
             <label className="menu-search"><Search size={14}/><input aria-label="Search conversations" placeholder="Find a conversation…" value={search} onChange={event => setSearch(event.target.value)}/></label>
-            <div className="menu-history">{filteredChats.map(chat => <div className="dialogue-row" key={chat.id}><button type="button" className="menu-action" aria-current={chat.id===props.active?'page':undefined} onClick={() => act(() => props.onSelect(chat.id))}><span>{chat.title}</span>{chat.id===props.active&&<Check size={13}/>}</button><button type="button" className="delete-dialogue" aria-label={`Delete ${chat.title}`} title="Delete conversation" onClick={()=>props.onDelete(chat.id)}><Trash2 size={14}/></button></div>)}{!filteredChats.length&&<p className="menu-note">No conversations found.</p>}</div>
-          </div>
+            <div className="menu-history">
+              {assistantChats.map(renderChat)}
+              {!filteredChats.length && search && <p className="menu-note">No conversations found.</p>}
+              <motion.div layout="position" transition={{layout:{duration:reduceMotion?0:0.28,ease:'easeOut'}}} className={`contact-conversations ${hasContactChats ? 'has-contacts' : ''}`}>
+                <div className="contact-heading">Clients &amp; recruiters</div>
+                {contactChats.map(renderChat)}
+              </motion.div>
+            </div>
+          </motion.div>
           <div className="sidebar-footer">
             <button type="button" className="menu-action" onClick={()=>act(props.onProfile)}><UserRound size={16}/><span>Your career profile</span></button>
             <button type="button" className="menu-action" onClick={()=>act(props.onClear)}><Trash2 size={16}/><span>Clear session</span></button>

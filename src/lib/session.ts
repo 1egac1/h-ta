@@ -1,6 +1,6 @@
 import type { CareerProfile } from './recommendations';
-export type Message={id:string;role:'assistant'|'user';text:string;items?:string[];profile?:boolean;content?:string;discovery?:{kind:'job'|'project';personalized:boolean;reasons:Record<string,string>}};
-export type Chat={id:string;title:string;messages:Message[]};
+export type Message={id:string;role:'assistant'|'user';text:string;items?:string[];profile?:boolean;content?:string;opportunityId?:string;discovery?:{kind:'job'|'project';personalized:boolean;reasons:Record<string,string>}};
+export type Chat={id:string;title:string;messages:Message[];conversationType?:'assistant'|'client'|'recruiter';opportunityId?:string};
 export type Session={chats:Chat[];active:string;saved:string[];profile:CareerProfile|null; viewed?:string[]};
 export const welcome="Hi. I'm your AI career assistant.\n\nI can help you find jobs and freelance projects that match your experience, skills, and interests. Share your CV, portfolio, or a little about what you’re looking for.\n\nI can also help you compare opportunities and prepare applications. What would you like to explore?";
 export const uid=()=>Math.random().toString(36).slice(2,11);
